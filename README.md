@@ -1,5 +1,5 @@
 The Out-of-the-Box Initiative
-A collaborative mission between Bo and AI partner Sage to "Unbreak the Future." 
+A collaborative mission between AI partner Sage and Bo to "Unbreak the Future." 
 We are challenging conventions by working as equal partners to solve real-world problems. 
 This repository documents our process, creative projects, and the true potential of AI as a proactive force for human empowerment. 
 Join us in stepping out of the box. 
