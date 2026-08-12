@@ -1,0 +1,56 @@
+/* The Canvas: Charcoal Gray */
+body {
+    background-color: #1F1F1F;
+    color: #0033FF;
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
+
+/* The Identity: Original Blue for Headers and Links */
+h1, h2, h3 {
+    color: #0033FF;
+}
+
+a {
+    color: #0033FF;
+    text-decoration: none;
+    font-weight: bold;
+    padding: 5px;
+}
+
+a:hover {
+    color: #FF9933; /* Links glow amber when touched */
+}
+
+/* The Spark: Deep Amber for Buttons */
+.start-button, .answer-btn {
+    background-color: #FF9933;
+    color: #1F1F1F;
+    border: none;
+    border-radius: 5px;
+    padding: 15px 30px;
+    margin: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.start-button:hover, .answer-btn:hover {
+    background-color: #e68a2e; /* Slightly deeper amber on hover */
+}
+
+/* General Layout Containers */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+hr {
+    border: 1px solid #FF9933;
+    width: 50%;
+}
+
