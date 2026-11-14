@@ -1,1 +1,374 @@
-PLACEHOLDER_FOR_FULL_CONTENT
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reelroom / Amber Studio</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --amber: #ff6b1a;
+    --amber-light: #ff8c42;
+    --amber-deep: #e85d04;
+    --text: #ff7a2f;
+    --card: #111;
+    --border: #2a1a10;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    padding: 1.5rem;
+    min-height: 100vh;
+  }
+  h1 { color: var(--amber); font-size: 2rem; margin-bottom: 0.25rem; letter-spacing: -0.02em; }
+  .subtitle { color: var(--amber-light); opacity: 0.8; margin-bottom: 1.5rem; }
+  section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  h2 { color: var(--amber); font-size: 1.1rem; margin-bottom: 0.75rem; }
+  label { display: block; color: var(--amber-light); font-size: 0.9rem; margin-bottom: 0.4rem; }
+  input[type="range"] { width: 100%; accent-color: var(--amber); margin: 0.5rem 0; }
+  .duration-display { font-size: 1.4rem; color: var(--amber); font-weight: 600; text-align: center; margin: 0.5rem 0; }
+  textarea, input[type="text"], input[type="file"] {
+    width: 100%;
+    background: #0d0d0d;
+    border: 1px solid #3a2a1a;
+    color: var(--text);
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    resize: vertical;
+  }
+  textarea:focus, input:focus { outline: none; border-color: var(--amber); }
+  button {
+    background: var(--amber-deep);
+    color: #111;
+    border: none;
+    padding: 0.7rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  button:hover { background: var(--amber); }
+  button.secondary { background: #222; color: var(--amber); border: 1px solid var(--amber-deep); }
+  button.preset { font-size: 0.85rem; padding: 0.5rem 0.8rem; }
+  .preview, .status {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: #0a0a0a;
+    border-radius: 8px;
+    border: 1px dashed #3a2a1a;
+    color: var(--amber-light);
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .record-status { margin-top: 0.5rem; font-size: 0.85rem; color: var(--amber); }
+  .char-sheet { font-size: 0.8rem; color: #aaa; background: #0d0d0d; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; }
+  nav { margin-bottom: 1.5rem; }
+  nav a { color: var(--amber-light); margin-right: 1rem; text-decoration: none; }
+  nav a:hover { color: var(--amber); }
+</style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">← Back to Unbroken Ecosystems</a>
+  </nav>
+  <h1>Reelroom</h1>
+  <p class="subtitle">Black + amber • Video + Music • TikTok Prep • Voice</p>
+
+  <section>
+    <h2>Video Duration</h2>
+    <label for="duration">Length (10 seconds – 2 minutes)</label>
+    <input type="range" id="duration" min="10" max="120" value="30" step="5">
+    <div class="duration-display" id="durationValue">30 seconds</div>
+  </section>
+
+  <section>
+    <h2>Dog vs Cat COD Series (Locked Characters)</h2>
+    <div class="char-sheet">
+      <strong>Ahanu</strong>: Beagle, full COD tactical gear (helmet, plate carrier w/ American flag, camo, gloves). Eats treats from pouch.<br>
+      <strong>Squadmate</strong>: Second beagle, same gear. Throws grenades, barks, reacts.<br>
+      <strong>Cats</strong>: Upright, same size, full tactical gear. Enemies / opposing force.<br>
+      <strong>Setting</strong>: Ruined urban street, rubble, smoke, golden hour, sparks. Photorealistic, low-angle.
+    </div>
+    <button class="preset" onclick="loadPreset('snacking')">Ahanu Snacking Chaos</button>
+    <button class="preset" onclick="loadPreset('grenade')">Squadmate Throws Grenade</button>
+    <button class="preset" onclick="loadPreset('advance')">Cats Advance</button>
+    <button class="preset" onclick="loadPreset('standoff')">Tense Standoff</button>
+  </section>
+
+  <section>
+    <h2>Video Prompt</h2>
+    <textarea id="videoPrompt" rows="5" placeholder="Describe the video scene... (photorealistic, lighting, action, etc.)"></textarea>
+    <button onclick="copyVideoPrompt()">Copy Video Prompt</button>
+  </section>
+
+  <section>
+    <h2>Music / Song Prompt (for MusicGPT)</h2>
+    <textarea id="musicPrompt" rows="4" placeholder="Describe the song style, mood, instruments, vocals..."></textarea>
+    <button onclick="copyMusicPrompt()">Copy Music Prompt</button>
+  </section>
+
+  <section>
+    <h2>Quick Editor Notes</h2>
+    <textarea id="notes" rows="3" placeholder="Notes for editing the video or song..."></textarea>
+  </section>
+
+  <section>
+    <h2>Record Audio</h2>
+    <button id="recordBtn" onclick="toggleRecord()">Start Recording</button>
+    <button class="secondary" onclick="downloadRecording()" id="downloadBtn" disabled>Download Recording</button>
+    <div class="record-status" id="recordStatus">Not recording</div>
+  </section>
+
+  <section>
+    <h2>Voice Tools (Browser TTS + Sample Record)</h2>
+    <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.75rem;">Record a short sample of your voice, then use browser text-to-speech (voices vary by device). Full AI voice cloning needs external tools like ElevenLabs or the local Unbroken Voice Studio app.</p>
+    <label>Text to speak</label>
+    <textarea id="ttsText" rows="3" placeholder="Enter text to speak..."></textarea>
+    <button onclick="speakText()">Speak Text</button>
+    <button class="secondary" onclick="stopSpeech()">Stop</button>
+    <div class="record-status" id="ttsStatus">Ready</div>
+  </section>
+
+  <section>
+    <h2>TikTok Prep (FFmpeg.wasm — local, no API key)</h2>
+    <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.75rem;">Trim to duration, force 9:16, optional audio replace. File stays on your device. Single-thread core (~30 MB download on first use).</p>
+    <label>Video file</label>
+    <input type="file" id="videoFile" accept="video/*">
+    <label style="margin-top:0.75rem;">Optional audio file (or use recorded)</label>
+    <input type="file" id="audioFile" accept="audio/*">
+    <div style="margin:0.75rem 0;">
+      <label><input type="checkbox" id="trimCheck" checked> Trim to selected duration</label>
+      <label><input type="checkbox" id="ratioCheck" checked> Force 9:16 (TikTok)</label>
+      <label><input type="checkbox" id="audioCheck"> Replace audio with selected/recorded</label>
+    </div>
+    <button id="loadFFmpegBtn" onclick="loadFFmpeg()">Load FFmpeg</button>
+    <button id="processBtn" onclick="processVideo()" disabled>Process for TikTok</button>
+    <div class="status" id="ffmpegStatus">FFmpeg not loaded</div>
+  </section>
+
+  <div class="preview" id="preview">
+    Duration: 30 seconds
+    Video prompt ready to copy.
+    Music prompt ready to copy.
+  </div>
+
+<script>
+const durationSlider = document.getElementById('duration');
+const durationValue = document.getElementById('durationValue');
+const preview = document.getElementById('preview');
+
+durationSlider.addEventListener('input', () => {
+  const secs = parseInt(durationSlider.value);
+  const label = secs >= 60 ? `${Math.floor(secs/60)} min ${secs%60} sec` : `${secs} seconds`;
+  durationValue.textContent = label;
+  updatePreview();
+});
+
+function updatePreview() {
+  const secs = durationSlider.value;
+  const video = document.getElementById('videoPrompt').value.trim() || '(no video prompt yet)';
+  const music = document.getElementById('musicPrompt').value.trim() || '(no music prompt yet)';
+  preview.textContent = `Duration: ${secs} seconds\n\nVideo:\n${video}\n\nMusic:\n${music}`;
+}
+
+document.getElementById('videoPrompt').addEventListener('input', updatePreview);
+document.getElementById('musicPrompt').addEventListener('input', updatePreview);
+
+function copyVideoPrompt() {
+  navigator.clipboard.writeText(document.getElementById('videoPrompt').value);
+  alert('Video prompt copied');
+}
+function copyMusicPrompt() {
+  navigator.clipboard.writeText(document.getElementById('musicPrompt').value);
+  alert('Music prompt copied');
+}
+
+const presets = {
+  snacking: `Photorealistic cinematic low-angle shot of Ahanu the tactical beagle in full COD gear (helmet, plate carrier with American flag patch, camo pants, gloves) casually eating dog treats from his pouch while chaos erupts around him. Second beagle squadmate nearby reacting and barking. Upright same-size tactical cats in matching helmets and plate carriers as the opposing force advancing through rubble. Ruined urban street, volumetric smoke, golden hour light, flying sparks and embers. Realistic fur under armor, no cartoon, no human faces.`,
+  grenade: `Photorealistic cinematic low-angle of the second tactical beagle squadmate in full COD gear poorly throwing a grenade toward upright same-size enemy cats in matching military helmets and plate carriers. Ahanu the beagle in the background distracted, eating treats from his pouch. Ruined urban street with rubble, smoke, golden hour, sparks. Dogs vs cats as opposing forces. Realistic, no cartoon.`,
+  advance: `Photorealistic low-angle cinematic of upright anthropomorphic cats the same size as the dogs, wearing full tactical helmets, plate carriers, and camo, advancing as the opposing force through a ruined urban street. Ahanu the beagle in full gear snacking from his treat pouch, squadmate beagle reacting. Volumetric smoke, golden hour, sparks and embers. Hostile dogs vs cats, realistic fur under armor.`,
+  standoff: `Tense photorealistic standoff, low-angle cinematic framing. Ahanu the tactical beagle and his squadmate in full COD gear facing upright same-size enemy cats in matching helmets and plate carriers amid rubble on a ruined urban street. Ahanu still distracted by treats. Golden hour light, volumetric smoke, flying sparks. Photorealistic, no cartoon, no human faces.`
+};
+
+function loadPreset(key) {
+  document.getElementById('videoPrompt').value = presets[key];
+  updatePreview();
+}
+
+// Recording
+let mediaRecorder, chunks = [], recording = false;
+async function toggleRecord() {
+  const btn = document.getElementById('recordBtn');
+  const status = document.getElementById('recordStatus');
+  const downloadBtn = document.getElementById('downloadBtn');
+  if (!recording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      chunks = [];
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        window.recordedBlob = blob;
+        downloadBtn.disabled = false;
+        status.textContent = 'Recording saved. Ready to download.';
+      };
+      mediaRecorder.start();
+      recording = true;
+      btn.textContent = 'Stop Recording';
+      status.textContent = 'Recording...';
+    } catch (err) {
+      status.textContent = 'Mic permission needed or not supported.';
+    }
+  } else {
+    mediaRecorder.stop();
+    recording = false;
+    btn.textContent = 'Start Recording';
+  }
+}
+function downloadRecording() {
+  if (!window.recordedBlob) return;
+  const url = URL.createObjectURL(window.recordedBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'reelroom-recording.webm';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Simple browser TTS
+let currentUtterance = null;
+function speakText() {
+  const text = document.getElementById('ttsText').value.trim();
+  const status = document.getElementById('ttsStatus');
+  if (!text) {
+    status.textContent = 'Enter some text first.';
+    return;
+  }
+  if (currentUtterance) {
+    speechSynthesis.cancel();
+  }
+  currentUtterance = new SpeechSynthesisUtterance(text);
+  currentUtterance.onend = () => { status.textContent = 'Finished speaking.'; currentUtterance = null; };
+  currentUtterance.onerror = (e) => { status.textContent = 'Speech error: ' + e.error; };
+  speechSynthesis.speak(currentUtterance);
+  status.textContent = 'Speaking...';
+}
+function stopSpeech() {
+  speechSynthesis.cancel();
+  document.getElementById('ttsStatus').textContent = 'Stopped.';
+  currentUtterance = null;
+}
+
+// FFmpeg.wasm (single-thread, CDN)
+let ffmpeg = null;
+async function loadFFmpeg() {
+  const status = document.getElementById('ffmpegStatus');
+  const btn = document.getElementById('loadFFmpegBtn');
+  status.textContent = 'Loading FFmpeg core (~30 MB)...';
+  btn.disabled = true;
+  try {
+    const { FFmpeg } = FFmpegWASM;
+    const { toBlobURL } = FFmpegUtil;
+    ffmpeg = new FFmpeg();
+    ffmpeg.on('log', ({ message }) => console.log(message));
+    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+    status.textContent = 'FFmpeg ready.';
+    document.getElementById('processBtn').disabled = false;
+  } catch (e) {
+    status.textContent = 'Load failed: ' + e.message;
+    btn.disabled = false;
+  }
+}
+
+async function processVideo() {
+  if (!ffmpeg) {
+    document.getElementById('ffmpegStatus').textContent = 'Load FFmpeg first.';
+    return;
+  }
+  const videoInput = document.getElementById('videoFile').files[0];
+  if (!videoInput) { alert('Select a video first'); return; }
+  const status = document.getElementById('ffmpegStatus');
+  const duration = document.getElementById('duration').value;
+  const doTrim = document.getElementById('trimCheck').checked;
+  const doRatio = document.getElementById('ratioCheck').checked;
+  const doAudio = document.getElementById('audioCheck').checked;
+  const audioInput = document.getElementById('audioFile').files[0] || window.recordedBlob;
+
+  status.textContent = 'Writing files...';
+  await ffmpeg.writeFile('input.mp4', new Uint8Array(await videoInput.arrayBuffer()));
+
+  let args = ['-i', 'input.mp4'];
+  let hasAudio = false;
+  if (doAudio && audioInput) {
+    const audioName = 'audio.webm';
+    let audioBuf;
+    if (audioInput.arrayBuffer) {
+      audioBuf = await audioInput.arrayBuffer();
+    } else if (audioInput instanceof Blob) {
+      audioBuf = await audioInput.arrayBuffer();
+    } else {
+      status.textContent = 'Invalid audio input.';
+      return;
+    }
+    await ffmpeg.writeFile(audioName, new Uint8Array(audioBuf));
+    args.push('-i', audioName);
+    hasAudio = true;
+  }
+
+  if (doTrim) {
+    args.push('-t', duration);
+  }
+
+  if (doRatio) {
+    args.push('-vf', 'scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black');
+    args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23');
+  } else {
+    args.push('-c:v', 'copy');
+  }
+
+  if (hasAudio) {
+    args.push('-map', '0:v:0', '-map', '1:a:0', '-c:a', 'aac', '-shortest');
+  } else {
+    args.push('-c:a', 'copy');
+  }
+
+  args.push('output.mp4');
+
+  status.textContent = 'Processing... (this can take a while on larger files)';
+  try {
+    await ffmpeg.exec(args);
+    const data = await ffmpeg.readFile('output.mp4');
+    const blob = new Blob([data.buffer], { type: 'video/mp4' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reelroom-tiktok.mp4';
+    a.click();
+    status.textContent = 'Done. Download started.';
+  } catch (e) {
+    status.textContent = 'Process error: ' + e.message;
+  }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+</body>
+</html>
