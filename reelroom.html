@@ -142,19 +142,20 @@
 
   <section>
     <h2>Voice Tools (Browser TTS)</h2>
-    <p style="font-size:0.85rem; color:var(--text); margin-bottom:0.75rem;">Uses your device’s voices. Tap Speak after the status says Ready. Some phones need a second tap or volume up.</p>
-    <label>Voice</label>
-    <select id="voiceSelect"><option value="">Loading voices...</option></select>
+    <p style="font-size:0.85rem; color:var(--text); margin-bottom:0.75rem;">Tap Speak Text. If nothing happens, tap it again or raise volume. Status line shows exactly what the browser is doing.</p>
+    <label>Voice (optional)</label>
+    <select id="voiceSelect"><option value="">Default / auto</option></select>
     <label style="margin-top:0.75rem;">Text to speak</label>
     <textarea id="ttsText" rows="3" placeholder="Enter text to speak..."></textarea>
     <button id="speakBtn">Speak Text</button>
     <button class="secondary" id="stopBtn">Stop</button>
-    <div class="record-status" id="ttsStatus">Loading voices...</div>
+    <button class="secondary" id="testBtn">Test Voice</button>
+    <div class="record-status" id="ttsStatus">Ready</div>
   </section>
 
   <section>
     <h2>TikTok Prep (FFmpeg.wasm — local, no API key)</h2>
-    <p style="font-size:0.85rem; color:var(--text); margin-bottom:0.75rem;">Trim to duration, force 9:16, optional audio replace. File stays on your device. First load downloads ~30 MB.</p>
+    <p style="font-size:0.85rem; color:var(--text); margin-bottom:0.75rem;">1. Load FFmpeg (first time downloads ~30 MB). 2. Select video. 3. Optional: check Replace audio and pick a file or use a recording. 4. Process.</p>
     <label>Video file</label>
     <input type="file" id="videoFile" accept="video/*">
     <div class="record-status" id="videoStatus">No video selected</div>
@@ -241,7 +242,6 @@
   document.getElementById('btn-advance').addEventListener('click', () => loadPreset('advance'));
   document.getElementById('btn-standoff').addEventListener('click', () => loadPreset('standoff'));
 
-  // File status
   document.getElementById('videoFile').addEventListener('change', (e) => {
     const f = e.target.files[0];
     document.getElementById('videoStatus').textContent = f ? `Video ready: ${f.name}` : 'No video selected';
@@ -294,58 +294,60 @@
     URL.revokeObjectURL(url);
   });
 
-  // Hardened TTS
-  let currentUtterance = null;
+  // TTS with fallback
   const voiceSelect = document.getElementById('voiceSelect');
   const ttsStatus = document.getElementById('ttsStatus');
+  let currentUtterance = null;
 
   function populateVoices() {
     const voices = speechSynthesis.getVoices();
-    voiceSelect.innerHTML = '';
-    if (!voices.length) {
-      voiceSelect.innerHTML = '<option value="">No voices yet</option>';
-      ttsStatus.textContent = 'No voices found — try refreshing or another browser.';
-      return;
-    }
+    const current = voiceSelect.value;
+    voiceSelect.innerHTML = '<option value="">Default / auto</option>';
     voices.forEach((v, i) => {
       const opt = document.createElement('option');
       opt.value = i;
       opt.textContent = `${v.name} (${v.lang})`;
       voiceSelect.appendChild(opt);
     });
-    ttsStatus.textContent = `Ready — ${voices.length} voices loaded. Pick one and tap Speak.`;
+    if (current) voiceSelect.value = current;
+    ttsStatus.textContent = voices.length ? `Ready — ${voices.length} voices. Tap Speak Text.` : 'Ready (using default voice). Tap Speak Text.';
   }
 
   populateVoices();
-  if (speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = populateVoices;
-  }
-  setTimeout(populateVoices, 500);
-  setTimeout(populateVoices, 1500);
+  speechSynthesis.onvoiceschanged = populateVoices;
+  setTimeout(populateVoices, 300);
+  setTimeout(populateVoices, 1000);
 
-  document.getElementById('speakBtn').addEventListener('click', () => {
-    const text = document.getElementById('ttsText').value.trim();
+  function speak(text, forceDefault) {
     if (!text) {
-      ttsStatus.textContent = 'Enter some text first.';
+      ttsStatus.textContent = 'Enter text first.';
       return;
     }
     speechSynthesis.cancel();
-    if (speechSynthesis.paused) speechSynthesis.resume();
+    try { speechSynthesis.resume(); } catch (e) {}
 
+    currentUtterance = new SpeechSynthesisUtterance(text);
     const voices = speechSynthesis.getVoices();
     const idx = parseInt(voiceSelect.value, 10);
-    currentUtterance = new SpeechSynthesisUtterance(text);
-    if (!isNaN(idx) && voices[idx]) {
+    if (!forceDefault && !isNaN(idx) && voices[idx]) {
       currentUtterance.voice = voices[idx];
     }
-    currentUtterance.rate = 1;
-    currentUtterance.pitch = 1;
     currentUtterance.onstart = () => { ttsStatus.textContent = 'Speaking...'; };
-    currentUtterance.onend = () => { ttsStatus.textContent = 'Finished speaking.'; currentUtterance = null; };
-    currentUtterance.onerror = (e) => { ttsStatus.textContent = 'Speech error: ' + (e.error || 'unknown') + '. Try another voice or browser.'; };
-
+    currentUtterance.onend = () => { ttsStatus.textContent = 'Finished.'; currentUtterance = null; };
+    currentUtterance.onerror = (e) => {
+      ttsStatus.textContent = 'Error: ' + (e.error || 'failed') + '. Trying default voice...';
+      if (!forceDefault) setTimeout(() => speak(text, true), 200);
+    };
     speechSynthesis.speak(currentUtterance);
-    ttsStatus.textContent = 'Starting speech...';
+    ttsStatus.textContent = 'Starting...';
+  }
+
+  document.getElementById('speakBtn').addEventListener('click', () => {
+    speak(document.getElementById('ttsText').value.trim());
+  });
+
+  document.getElementById('testBtn').addEventListener('click', () => {
+    speak('Reelroom voice test. If you hear this, TTS is working.');
   });
 
   document.getElementById('stopBtn').addEventListener('click', () => {
@@ -354,30 +356,27 @@
     currentUtterance = null;
   });
 
-  // FFmpeg.wasm
+  // FFmpeg
   let ffmpeg = null;
   document.getElementById('loadFFmpegBtn').addEventListener('click', async () => {
     const status = document.getElementById('ffmpegStatus');
     const btn = document.getElementById('loadFFmpegBtn');
-    status.textContent = 'Loading FFmpeg core (~30 MB)... this can take 10-30 seconds.';
+    status.textContent = 'Loading FFmpeg (~30 MB). Wait...';
     btn.disabled = true;
     try {
-      if (typeof FFmpegWASM === 'undefined' || typeof FFmpegUtil === 'undefined') {
-        throw new Error('FFmpeg scripts did not load. Check connection or try another browser.');
-      }
+      if (typeof FFmpegWASM === 'undefined') throw new Error('Scripts not loaded. Refresh the page.');
       const { FFmpeg } = FFmpegWASM;
       const { toBlobURL } = FFmpegUtil;
       ffmpeg = new FFmpeg();
-      ffmpeg.on('log', ({ message }) => console.log(message));
       const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
       await ffmpeg.load({
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
         wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
       });
-      status.textContent = 'FFmpeg ready. You can process now.';
+      status.textContent = 'FFmpeg ready. Select a video and press Process.';
       document.getElementById('processBtn').disabled = false;
     } catch (e) {
-      status.textContent = 'Load failed: ' + e.message + '. Try refreshing or a different browser.';
+      status.textContent = 'Load failed: ' + e.message;
       btn.disabled = false;
     }
   });
@@ -397,7 +396,7 @@
     const doTrim = document.getElementById('trimCheck').checked;
     const doRatio = document.getElementById('ratioCheck').checked;
     const doAudio = document.getElementById('audioCheck').checked;
-    let audioInput = document.getElementById('audioFile').files[0] || window.recordedBlob;
+    const audioInput = document.getElementById('audioFile').files[0] || window.recordedBlob;
 
     status.textContent = 'Writing files...';
     try {
@@ -429,7 +428,7 @@
 
       args.push('output.mp4');
 
-      status.textContent = 'Processing... (can take a while on larger files)';
+      status.textContent = 'Processing... this can take a while.';
       await ffmpeg.exec(args);
       const data = await ffmpeg.readFile('output.mp4');
       const blob = new Blob([data.buffer], { type: 'video/mp4' });
