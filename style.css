@@ -1,4 +1,4 @@
-/* Unbroken Ecosystems — black + amber, app-like */
+/* Unbroken Ecosystems — black + amber, no white text */
 :root {
   --bg: #0a0a0a;
   --card: #111;
@@ -6,8 +6,8 @@
   --amber: #ff6b1a;
   --amber-light: #ff8c42;
   --amber-deep: #e85d04;
-  --text: #e8e8e8;
-  --muted: #999;
+  --text: #ff7a2f;
+  --muted: #cc6b2a;
 }
 
 * { box-sizing: border-box; }
@@ -25,6 +25,10 @@ body {
 h1, h2, h3 {
   color: var(--amber);
   font-weight: 600;
+}
+
+p, li, span, div, strong, em {
+  color: var(--text);
 }
 
 a { color: var(--amber-light); text-decoration: none; font-weight: 600; }
@@ -58,6 +62,7 @@ nav a {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #111;
+  color: var(--amber-light);
 }
 
 .sages-note, .note {
@@ -67,6 +72,7 @@ nav a {
   margin: 1.25rem auto;
   max-width: 820px;
   border-radius: 8px;
+  color: var(--text);
 }
 
 .muted { color: var(--muted); }
