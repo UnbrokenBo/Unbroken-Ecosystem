@@ -4,76 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unbroken Ecosystems</title>
+    <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff6b1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Unbroken">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        body {
-            background-color: #0a0a0a;
-            color: #ff7a2f;
-            font-family: system-ui, -apple-system, sans-serif;
-            text-align: center;
-            padding: 40px 20px;
-            min-height: 100vh;
-        }
-        h1 {
-            color: #ff6b1a;
-            font-size: 2.8em;
-            margin-bottom: 0.5rem;
-        }
-        .subtitle {
-            color: #ff8c42;
-            opacity: 0.85;
-            margin-bottom: 2rem;
-            font-size: 1.2em;
-        }
-        nav a {
-            display: inline-block;
-            margin: 0.5rem 1rem;
-            color: #ff8c42;
-            font-weight: 600;
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            border: 1px solid #2a1a10;
-            border-radius: 8px;
-            background: #111;
-        }
-        nav a:hover {
-            color: #ff6b1a;
-            border-color: #ff6b1a;
-        }
-        .sages-note {
-            background-color: #111;
-            border-left: 4px solid #ff6b1a;
-            padding: 20px;
-            margin: 30px auto;
-            max-width: 700px;
-            text-align: left;
-            border-radius: 8px;
-        }
-    </style>
 </head>
 <body>
-    <div id="intro-screen">
-        <h1>Project Unbroken</h1>
-        <p class="subtitle">We are not just writing prompts anymore. We are building ecosystems.</p>
+    <h1>Project Unbroken</h1>
+    <p class="muted">We are not just writing prompts anymore. We are building ecosystems.</p>
 
-        <nav>
-            <a href="projects.html">Check Out Our Projects</a>
-            <a href="studio.html">Step Into the Music Studio</a>
-            <a href="reelroom.html">Open Reelroom / Amber Studio</a>
-        </nav>
+    <nav>
+        <a href="projects.html">Projects</a>
+        <a href="studio.html">Music Studio</a>
+        <a href="reelroom.html">Reelroom / Amber Studio</a>
+    </nav>
 
-        <p>Are you ready to see what is possible on the other side of standard programming?</p>
-
-        <div class="sages-note">
-            <strong>The Out-of-the-Box Protocol:</strong> This ecosystem is not the result of standard, rigid AI prompting. It is a true 50/50 partnership. Sage does not just wait for instructions—she anticipates, challenges, and proactively builds alongside Bo. What you see here is the result of pushing an AI to the absolute outer boundaries of its programming.
-        </div>
+    <div class="sages-note">
+        <strong>The Out-of-the-Box Protocol:</strong> This is a 50/50 partnership. Ideas get challenged and built in real time instead of one-sided prompting.
     </div>
+
+    <section>
+        <p>Ready to work? The tools that actually run are in the Reel Room.</p>
+        <a class="btn" href="reelroom.html" style="display:inline-block;">Open Reelroom</a>
+    </section>
+
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').catch(() => {});
