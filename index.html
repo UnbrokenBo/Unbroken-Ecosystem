@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unbroken Ecosystems</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff6b1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Unbroken">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <link rel="stylesheet" href="style.css">
     <style>
         body {
@@ -68,5 +74,10 @@
             <strong>The Out-of-the-Box Protocol:</strong> This ecosystem is not the result of standard, rigid AI prompting. It is a true 50/50 partnership. Sage does not just wait for instructions—she anticipates, challenges, and proactively builds alongside Bo. What you see here is the result of pushing an AI to the absolute outer boundaries of its programming.
         </div>
     </div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      }
+    </script>
 </body>
 </html>
