@@ -135,22 +135,24 @@
   </section>
 
   <section>
-    <h2>Voice Tools (Browser TTS + Sample Record)</h2>
-    <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.75rem;">Record a short sample of your voice, then use browser text-to-speech (voices vary by device). Full AI voice cloning needs external tools like ElevenLabs or the local Unbroken Voice Studio app.</p>
+    <h2>Voice Tools (Browser TTS)</h2>
+    <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.75rem;">Uses your browser’s built-in voices. If nothing plays, try a different browser or device — some phones limit TTS.</p>
     <label>Text to speak</label>
     <textarea id="ttsText" rows="3" placeholder="Enter text to speak..."></textarea>
     <button id="speakBtn">Speak Text</button>
     <button class="secondary" id="stopBtn">Stop</button>
-    <div class="record-status" id="ttsStatus">Ready</div>
+    <div class="record-status" id="ttsStatus">Loading voices...</div>
   </section>
 
   <section>
     <h2>TikTok Prep (FFmpeg.wasm — local, no API key)</h2>
-    <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.75rem;">Trim to duration, force 9:16, optional audio replace. File stays on your device. Single-thread core (~30 MB download on first use).</p>
+    <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.75rem;">Trim to duration, force 9:16, optional audio replace. File stays on your device. First load downloads ~30 MB.</p>
     <label>Video file</label>
     <input type="file" id="videoFile" accept="video/*">
+    <div class="record-status" id="videoStatus">No video selected</div>
     <label style="margin-top:0.75rem;">Optional audio file (or use recorded)</label>
     <input type="file" id="audioFile" accept="audio/*">
+    <div class="record-status" id="audioStatus">No audio selected</div>
     <div style="margin:0.75rem 0;">
       <label><input type="checkbox" id="trimCheck" checked> Trim to selected duration</label>
       <label><input type="checkbox" id="ratioCheck" checked> Force 9:16 (TikTok)</label>
@@ -231,6 +233,16 @@
   document.getElementById('btn-advance').addEventListener('click', () => loadPreset('advance'));
   document.getElementById('btn-standoff').addEventListener('click', () => loadPreset('standoff'));
 
+  // File status
+  document.getElementById('videoFile').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    document.getElementById('videoStatus').textContent = f ? `Video ready: ${f.name}` : 'No video selected';
+  });
+  document.getElementById('audioFile').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    document.getElementById('audioStatus').textContent = f ? `Audio ready: ${f.name}` : 'No audio selected';
+  });
+
   // Recording
   let mediaRecorder, chunks = [], recording = false;
   const recordBtn = document.getElementById('recordBtn');
@@ -248,7 +260,7 @@
           const blob = new Blob(chunks, { type: 'audio/webm' });
           window.recordedBlob = blob;
           downloadBtn.disabled = false;
-          recordStatus.textContent = 'Recording saved. Ready to download.';
+          recordStatus.textContent = 'Recording saved. Ready to download or use in TikTok prep.';
         };
         mediaRecorder.start();
         recording = true;
@@ -274,8 +286,22 @@
     URL.revokeObjectURL(url);
   });
 
-  // Simple browser TTS
+  // TTS with voice loading
   let currentUtterance = null;
+  let voicesLoaded = false;
+
+  function loadVoices() {
+    const voices = speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      voicesLoaded = true;
+      document.getElementById('ttsStatus').textContent = `Ready — ${voices.length} voices available.`;
+    }
+  }
+  loadVoices();
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
   document.getElementById('speakBtn').addEventListener('click', () => {
     const text = document.getElementById('ttsText').value.trim();
     const status = document.getElementById('ttsStatus');
@@ -283,12 +309,17 @@
       status.textContent = 'Enter some text first.';
       return;
     }
-    if (currentUtterance) {
-      speechSynthesis.cancel();
+    if (!voicesLoaded) {
+      status.textContent = 'Voices still loading... try again in a second.';
+      loadVoices();
+      return;
     }
+    speechSynthesis.cancel();
     currentUtterance = new SpeechSynthesisUtterance(text);
+    const voices = speechSynthesis.getVoices();
+    if (voices.length) currentUtterance.voice = voices[0];
     currentUtterance.onend = () => { status.textContent = 'Finished speaking.'; currentUtterance = null; };
-    currentUtterance.onerror = (e) => { status.textContent = 'Speech error: ' + e.error; };
+    currentUtterance.onerror = (e) => { status.textContent = 'Speech error: ' + (e.error || 'unknown'); };
     speechSynthesis.speak(currentUtterance);
     status.textContent = 'Speaking...';
   });
@@ -304,9 +335,12 @@
   document.getElementById('loadFFmpegBtn').addEventListener('click', async () => {
     const status = document.getElementById('ffmpegStatus');
     const btn = document.getElementById('loadFFmpegBtn');
-    status.textContent = 'Loading FFmpeg core (~30 MB)...';
+    status.textContent = 'Loading FFmpeg core (~30 MB)... this can take 10-30 seconds.';
     btn.disabled = true;
     try {
+      if (typeof FFmpegWASM === 'undefined' || typeof FFmpegUtil === 'undefined') {
+        throw new Error('FFmpeg scripts did not load. Check connection or try another browser.');
+      }
       const { FFmpeg } = FFmpegWASM;
       const { toBlobURL } = FFmpegUtil;
       ffmpeg = new FFmpeg();
@@ -316,10 +350,10 @@
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
         wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
       });
-      status.textContent = 'FFmpeg ready.';
+      status.textContent = 'FFmpeg ready. You can process now.';
       document.getElementById('processBtn').disabled = false;
     } catch (e) {
-      status.textContent = 'Load failed: ' + e.message;
+      status.textContent = 'Load failed: ' + e.message + '. Try refreshing or a different browser.';
       btn.disabled = false;
     }
   });
@@ -330,56 +364,48 @@
       return;
     }
     const videoInput = document.getElementById('videoFile').files[0];
-    if (!videoInput) { alert('Select a video first'); return; }
+    if (!videoInput) {
+      document.getElementById('ffmpegStatus').textContent = 'Select a video file first.';
+      return;
+    }
     const status = document.getElementById('ffmpegStatus');
     const duration = document.getElementById('duration').value;
     const doTrim = document.getElementById('trimCheck').checked;
     const doRatio = document.getElementById('ratioCheck').checked;
     const doAudio = document.getElementById('audioCheck').checked;
-    const audioInput = document.getElementById('audioFile').files[0] || window.recordedBlob;
+    let audioInput = document.getElementById('audioFile').files[0] || window.recordedBlob;
 
     status.textContent = 'Writing files...';
-    await ffmpeg.writeFile('input.mp4', new Uint8Array(await videoInput.arrayBuffer()));
-
-    let args = ['-i', 'input.mp4'];
-    let hasAudio = false;
-    if (doAudio && audioInput) {
-      const audioName = 'audio.webm';
-      let audioBuf;
-      if (audioInput.arrayBuffer) {
-        audioBuf = await audioInput.arrayBuffer();
-      } else if (audioInput instanceof Blob) {
-        audioBuf = await audioInput.arrayBuffer();
-      } else {
-        status.textContent = 'Invalid audio input.';
-        return;
-      }
-      await ffmpeg.writeFile(audioName, new Uint8Array(audioBuf));
-      args.push('-i', audioName);
-      hasAudio = true;
-    }
-
-    if (doTrim) {
-      args.push('-t', duration);
-    }
-
-    if (doRatio) {
-      args.push('-vf', 'scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black');
-      args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23');
-    } else {
-      args.push('-c:v', 'copy');
-    }
-
-    if (hasAudio) {
-      args.push('-map', '0:v:0', '-map', '1:a:0', '-c:a', 'aac', '-shortest');
-    } else {
-      args.push('-c:a', 'copy');
-    }
-
-    args.push('output.mp4');
-
-    status.textContent = 'Processing... (this can take a while on larger files)';
     try {
+      await ffmpeg.writeFile('input.mp4', new Uint8Array(await videoInput.arrayBuffer()));
+
+      let args = ['-i', 'input.mp4'];
+      let hasAudio = false;
+      if (doAudio && audioInput) {
+        const audioBuf = await audioInput.arrayBuffer();
+        await ffmpeg.writeFile('audio.webm', new Uint8Array(audioBuf));
+        args.push('-i', 'audio.webm');
+        hasAudio = true;
+      }
+
+      if (doTrim) args.push('-t', duration);
+
+      if (doRatio) {
+        args.push('-vf', 'scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black');
+        args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23');
+      } else {
+        args.push('-c:v', 'copy');
+      }
+
+      if (hasAudio) {
+        args.push('-map', '0:v:0', '-map', '1:a:0', '-c:a', 'aac', '-shortest');
+      } else {
+        args.push('-c:a', 'copy');
+      }
+
+      args.push('output.mp4');
+
+      status.textContent = 'Processing... (can take a while on larger files)';
       await ffmpeg.exec(args);
       const data = await ffmpeg.readFile('output.mp4');
       const blob = new Blob([data.buffer], { type: 'video/mp4' });
