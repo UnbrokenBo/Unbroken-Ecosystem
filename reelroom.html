@@ -30,7 +30,7 @@
     min-height: 100vh;
   }
   h1 { color: var(--amber); font-size: 2rem; margin-bottom: 0.25rem; letter-spacing: -0.02em; }
-  .subtitle { color: var(--amber-light); opacity: 0.8; margin-bottom: 1.5rem; }
+  .subtitle { color: var(--amber-light); opacity: 0.9; margin-bottom: 1.5rem; }
   section {
     background: var(--card);
     border: 1px solid var(--border);
@@ -42,7 +42,7 @@
   label { display: block; color: var(--amber-light); font-size: 0.9rem; margin-bottom: 0.4rem; }
   input[type="range"] { width: 100%; accent-color: var(--amber); margin: 0.5rem 0; }
   .duration-display { font-size: 1.4rem; color: var(--amber); font-weight: 600; text-align: center; margin: 0.5rem 0; }
-  textarea, input[type="text"], input[type="file"] {
+  textarea, input[type="text"], input[type="file"], select {
     width: 100%;
     background: #0d0d0d;
     border: 1px solid #3a2a1a;
@@ -53,7 +53,7 @@
     font-size: 0.95rem;
     resize: vertical;
   }
-  textarea:focus, input:focus { outline: none; border-color: var(--amber); }
+  textarea:focus, input:focus, select:focus { outline: none; border-color: var(--amber); }
   button {
     background: var(--amber-deep);
     color: #111;
@@ -80,7 +80,7 @@
     word-break: break-word;
   }
   .record-status { margin-top: 0.5rem; font-size: 0.85rem; color: var(--amber); }
-  .char-sheet { font-size: 0.8rem; color: #aaa; background: #0d0d0d; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; }
+  .char-sheet { font-size: 0.85rem; color: var(--text); background: #0d0d0d; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; }
   nav { margin-bottom: 1.5rem; }
   nav a { color: var(--amber-light); margin-right: 1rem; text-decoration: none; }
   nav a:hover { color: var(--amber); }
@@ -142,8 +142,10 @@
 
   <section>
     <h2>Voice Tools (Browser TTS)</h2>
-    <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.75rem;">Uses your browser’s built-in voices. If nothing plays, try a different browser or device — some phones limit TTS.</p>
-    <label>Text to speak</label>
+    <p style="font-size:0.85rem; color:var(--text); margin-bottom:0.75rem;">Uses your device’s voices. Tap Speak after the status says Ready. Some phones need a second tap or volume up.</p>
+    <label>Voice</label>
+    <select id="voiceSelect"><option value="">Loading voices...</option></select>
+    <label style="margin-top:0.75rem;">Text to speak</label>
     <textarea id="ttsText" rows="3" placeholder="Enter text to speak..."></textarea>
     <button id="speakBtn">Speak Text</button>
     <button class="secondary" id="stopBtn">Stop</button>
@@ -152,7 +154,7 @@
 
   <section>
     <h2>TikTok Prep (FFmpeg.wasm — local, no API key)</h2>
-    <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.75rem;">Trim to duration, force 9:16, optional audio replace. File stays on your device. First load downloads ~30 MB.</p>
+    <p style="font-size:0.85rem; color:var(--text); margin-bottom:0.75rem;">Trim to duration, force 9:16, optional audio replace. File stays on your device. First load downloads ~30 MB.</p>
     <label>Video file</label>
     <input type="file" id="videoFile" accept="video/*">
     <div class="record-status" id="videoStatus">No video selected</div>
@@ -292,47 +294,63 @@
     URL.revokeObjectURL(url);
   });
 
-  // TTS with voice loading
+  // Hardened TTS
   let currentUtterance = null;
-  let voicesLoaded = false;
+  const voiceSelect = document.getElementById('voiceSelect');
+  const ttsStatus = document.getElementById('ttsStatus');
 
-  function loadVoices() {
+  function populateVoices() {
     const voices = speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      voicesLoaded = true;
-      document.getElementById('ttsStatus').textContent = `Ready — ${voices.length} voices available.`;
+    voiceSelect.innerHTML = '';
+    if (!voices.length) {
+      voiceSelect.innerHTML = '<option value="">No voices yet</option>';
+      ttsStatus.textContent = 'No voices found — try refreshing or another browser.';
+      return;
     }
+    voices.forEach((v, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${v.name} (${v.lang})`;
+      voiceSelect.appendChild(opt);
+    });
+    ttsStatus.textContent = `Ready — ${voices.length} voices loaded. Pick one and tap Speak.`;
   }
-  loadVoices();
+
+  populateVoices();
   if (speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = loadVoices;
+    speechSynthesis.onvoiceschanged = populateVoices;
   }
+  setTimeout(populateVoices, 500);
+  setTimeout(populateVoices, 1500);
 
   document.getElementById('speakBtn').addEventListener('click', () => {
     const text = document.getElementById('ttsText').value.trim();
-    const status = document.getElementById('ttsStatus');
     if (!text) {
-      status.textContent = 'Enter some text first.';
-      return;
-    }
-    if (!voicesLoaded) {
-      status.textContent = 'Voices still loading... try again in a second.';
-      loadVoices();
+      ttsStatus.textContent = 'Enter some text first.';
       return;
     }
     speechSynthesis.cancel();
-    currentUtterance = new SpeechSynthesisUtterance(text);
+    if (speechSynthesis.paused) speechSynthesis.resume();
+
     const voices = speechSynthesis.getVoices();
-    if (voices.length) currentUtterance.voice = voices[0];
-    currentUtterance.onend = () => { status.textContent = 'Finished speaking.'; currentUtterance = null; };
-    currentUtterance.onerror = (e) => { status.textContent = 'Speech error: ' + (e.error || 'unknown'); };
+    const idx = parseInt(voiceSelect.value, 10);
+    currentUtterance = new SpeechSynthesisUtterance(text);
+    if (!isNaN(idx) && voices[idx]) {
+      currentUtterance.voice = voices[idx];
+    }
+    currentUtterance.rate = 1;
+    currentUtterance.pitch = 1;
+    currentUtterance.onstart = () => { ttsStatus.textContent = 'Speaking...'; };
+    currentUtterance.onend = () => { ttsStatus.textContent = 'Finished speaking.'; currentUtterance = null; };
+    currentUtterance.onerror = (e) => { ttsStatus.textContent = 'Speech error: ' + (e.error || 'unknown') + '. Try another voice or browser.'; };
+
     speechSynthesis.speak(currentUtterance);
-    status.textContent = 'Speaking...';
+    ttsStatus.textContent = 'Starting speech...';
   });
 
   document.getElementById('stopBtn').addEventListener('click', () => {
     speechSynthesis.cancel();
-    document.getElementById('ttsStatus').textContent = 'Stopped.';
+    ttsStatus.textContent = 'Stopped.';
     currentUtterance = null;
   });
 
